@@ -22,7 +22,7 @@ const Login = props => {
       .then(res => {
         localStorage.setItem('token', res.data.payload);
         setFormData({ username: '', password: '', });
-        props.history.push('/');
+        props.history.push('/bubblepage');
       })
       .catch(err => {
         alert(err.message);
