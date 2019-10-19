@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axiosWithAuth from '../helpers/axiosWithAuth';
 
 const initialColor = {
   color: "",
@@ -7,7 +7,6 @@ const initialColor = {
 };
 
 const ColorList = ({ colors, updateColors }) => {
-  console.log(colors);
   const [editing, setEditing] = useState(false);
   const [colorToEdit, setColorToEdit] = useState(initialColor);
 
@@ -16,15 +15,51 @@ const ColorList = ({ colors, updateColors }) => {
     setColorToEdit(color);
   };
 
-  const saveEdit = e => {
+  const cancel = e => {
     e.preventDefault();
-    // Make a put request to save your updated color
-    // think about where will you get the id from...
-    // where is is saved right now?
+    setEditing(false);
+    setColorToEdit(initialColor);
+  }
+
+  const saveEdit = e => {
+    if (editing) {
+      e.preventDefault();
+      axiosWithAuth()
+        .put(`/api/colors/${colorToEdit.id}`, colorToEdit)
+        .then(res => {
+          setEditing(false);
+          setColorToEdit(initialColor);
+          const newColors = colors.map(color => color.id === res.data.id ? res.data : color);
+          updateColors(newColors);
+        })
+        .catch(err => {
+          alert(err.message);
+        });
+    } else {
+      e.preventDefault();
+      axiosWithAuth()
+        .post(`/api/colors`, colorToEdit)
+        .then(res => {
+          setColorToEdit(initialColor);
+          const newColors = res.data;
+          updateColors(newColors);
+        })
+        .catch(err => {
+          alert(err.message);
+        });
+    }
   };
 
   const deleteColor = color => {
-    // make a delete request to delete this color
+    axiosWithAuth()
+      .delete(`/api/colors/${color.id}`)
+      .then(res => {
+        const newColors = colors.filter(color => color.id !== res.data);
+        updateColors(newColors);
+      })
+      .catch(err => {
+        alert(err.message);
+      });
   };
 
   return (
@@ -32,12 +67,12 @@ const ColorList = ({ colors, updateColors }) => {
       <p>colors</p>
       <ul>
         {colors.map(color => (
-          <li key={color.color} onClick={() => editColor(color)}>
+          <li key={color.color}>
             <span>
               <span className="delete" onClick={() => deleteColor(color)}>
                 x
               </span>{" "}
-              {color.color}
+              <span onClick={() => editColor(color)}>{color.color}</span>
             </span>
             <div
               className="color-box"
@@ -46,38 +81,34 @@ const ColorList = ({ colors, updateColors }) => {
           </li>
         ))}
       </ul>
-      {editing && (
-        <form onSubmit={saveEdit}>
-          <legend>edit color</legend>
-          <label>
-            color name:
-            <input
-              onChange={e =>
-                setColorToEdit({ ...colorToEdit, color: e.target.value })
-              }
-              value={colorToEdit.color}
-            />
-          </label>
-          <label>
-            hex code:
-            <input
-              onChange={e =>
-                setColorToEdit({
-                  ...colorToEdit,
-                  code: { hex: e.target.value }
-                })
-              }
-              value={colorToEdit.code.hex}
-            />
-          </label>
-          <div className="button-row">
-            <button type="submit">save</button>
-            <button onClick={() => setEditing(false)}>cancel</button>
-          </div>
-        </form>
-      )}
-      <div className="spacer" />
-      {/* stretch - build another form here to add a color */}
+      <form>
+        <legend>{editing ? 'edit' : 'add'} color</legend>
+        <label>
+          color name:
+          <input
+            onChange={e =>
+              setColorToEdit({ ...colorToEdit, color: e.target.value })
+            }
+            value={colorToEdit.color}
+          />
+        </label>
+        <label>
+          hex code:
+          <input
+            onChange={e =>
+              setColorToEdit({
+                ...colorToEdit,
+                code: { hex: e.target.value }
+              })
+            }
+            value={colorToEdit.code.hex}
+          />
+        </label>
+        <div className="button-row">
+          <button onClick={saveEdit} type="submit">save</button>
+          <button onClick={cancel}>cancel</button>
+        </div>
+      </form>
     </div>
   );
 };
